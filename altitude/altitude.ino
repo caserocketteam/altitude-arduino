@@ -21,13 +21,10 @@ int sensors = 0;
 
 //control values
 bool brake = false;
-int seaLevelPressure = 1016;
+float seaLevelPressure = 1016;
 
 void setup() {
-  initSensors();
   pinMode(solenoid, OUTPUT);
-  
-  Wire.begin();
   Serial.begin(9600);
 }
 
