@@ -29,6 +29,8 @@ float seaLevelPressure = 1016;  // ** SET THIS BEFORE LAUNCH **
 float altitude;
 float last_altitude;
 float altitude_change;
+float velocity = 0;
+float altitude_open_loop = launch_altitude;
 
 void setup() {
   pinMode(solenoid, OUTPUT);
@@ -64,7 +66,8 @@ void loop() {
     time = millis();
     time_difference = time - last_time;
     accel.getEvent(&accel_event);
-    
+    velocity = velocity + ( time_difference * (accel_event.acceleration.x - 1));
+    altitude_open_loop = altitude_open_loop + (time_difference * velocity);
     last_time = time;
   }
   
