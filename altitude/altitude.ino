@@ -16,7 +16,7 @@ unsigned long time = 0;
 unsigned long last_time = 0;
 unsigned long time_difference;
 unsigned long coast_time = 0;
-unsigned long flight_time = 5000;  //  ** SET THIS BEFORE LAUNCH ** time from burnout to appogee in ms
+unsigned long flight_time = 9000;  //  ** SET THIS BEFORE LAUNCH ** time from burnout to appogee in ms
 int target_altitude = 1625;
 
 //declare pin aliases
@@ -31,7 +31,7 @@ float targetAltitude;
 float altitude;
 float last_altitude;
 float altitude_difference;
-float estimated_altitude;
+float estimated_altitude;  
 float last_difference;
 float velocity;
 
