@@ -15,9 +15,9 @@ Adafruit_BMP085_Unified       bmp   = Adafruit_BMP085_Unified(18001);
 unsigned long time = 0;
 unsigned long last_time = 0;
 unsigned long time_difference;
+unsigned long coast_time = 0;
+unsigned long flight_time = 5000;  //  ** SET THIS BEFORE LAUNCH ** time from burnout to appogee in ms
 int target_altitude = 1625;
-int launch_altitude = 400;  // ** SET THIS BEFORE LAUNCH **
-int absolute_distance = target_altitude + launch_altitude;
 
 //declare pin aliases
 int solenoid = 13;
@@ -26,11 +26,14 @@ int sensors = 0;
 //control values
 bool brake = false;
 float seaLevelPressure = 1016;  // ** SET THIS BEFORE LAUNCH **
+float startAltitude = 0;
+float targetAltitude;
 float altitude;
 float last_altitude;
-float altitude_change;
-float velocity = 0;
-float altitude_open_loop = launch_altitude;
+float altitude_difference;
+float estimated_altitude;
+float last_difference;
+float velocity;
 
 void setup() {
   pinMode(solenoid, OUTPUT);
@@ -38,25 +41,19 @@ void setup() {
 }
 
 void loop() {
-  sensors_event_t accel_event;
   sensors_event_t bmp_event;
 
-  /* Calculate the altitude using the barometric pressure sensor */
+  // Calculate the altitude using the barometric pressure sensor
   bmp.getEvent(&bmp_event);
   if (bmp_event.pressure){
-    /* Get ambient temperature in C */
     float temperature;
     bmp.getTemperature(&temperature);
+    altitude = bmp.pressureToAltitude(seaLevelPressure, bmp_event.pressure, temperature);
     
-    /* Convert atmospheric pressure, SLP and temp to altitude */
-    altitude = bmp.pressureToAltitude(seaLevelPressure, bmp_event.pressure, temperature); 
-  }
-    
-  Wire.requestFrom(2,7);  //check I2C bit length
-  
-  while(Wire.available()){
-    char c = Wire.read();
-    Serial.print(c);
+    if(startAltitude == 0){
+      startAltitude = altitude;
+      targetAltitude = startAltitude + 1625;
+    }
   }
   
   //calculate speed
@@ -65,16 +62,26 @@ void loop() {
   } else {
     time = millis();
     time_difference = time - last_time;
-    accel.getEvent(&accel_event);
-    velocity = velocity + ( time_difference * (accel_event.acceleration.x - 1));
-    altitude_open_loop = altitude_open_loop + (time_difference * velocity);
+    altitude_difference = last_altitude - altitude;
+    velocity = altitude_difference / time_difference;
     last_time = time;
+    last_altitude = altitude;
+    last_difference = altitude_difference;
   }
   
-  //calculate change in altitude
-  altitude_change = altitude - last_altitude;
+  if(altitude_difference < last_difference + 0.5){  //the rocket is slowing down (end powered flight)
+    if(coast_time == 0){
+      coast_time = millis();
+    }
+    
+    estimated_altitude = altitude + (velocity * (flight_time - coast_time)) + ( 4.9 * (flight_time - coast_time) * (flight_time - coast_time));
   
-  //math for control goes here
+    if(estimated_altitude > targetAltitude){  // The rocket is going to fast
+      brake = true;
+    } else {
+      brake = false;
+    }
+  }
   
   if(brake == false){
     digitalWrite(solenoid, LOW);
